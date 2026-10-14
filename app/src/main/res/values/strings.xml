@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">WordLens</string>
+
+    <string name="welcome_title">Never lose your place to look up a word</string>
+    <string name="welcome_body">Hold your phone over the page and rest the lens on a word. Its meaning appears in under a second — no typing, no searching, and your book stays in your hands.</string>
+    <string name="welcome_denied">WordLens needs the camera to see your page. You can allow it in Settings → Permissions → Camera.</string>
+    <string name="welcome_privacy">Works offline. The camera picture never leaves your phone.</string>
+    <string name="action_allow_camera">Allow camera</string>
+    <string name="action_open_settings">Open Settings</string>
+
+    <string name="hint_aim">Rest the lens on a word</string>
+    <string name="hint_hold_still">Hold still…</string>
+    <string name="hint_tap_again">Tap the word to see it again</string>
+    <string name="hint_no_text">Can\'t see any text — move a little closer</string>
+    <string name="hint_no_text_light">Can\'t see any text — move closer or turn on the light</string>
+
+    <string name="action_light_on">Turn on light</string>
+    <string name="action_light_off">Turn off light</string>
+    <string name="action_close">Close</string>
+    <string name="action_pronounce">Say “%1$s” out loud</string>
+
+    <string name="meaning_form_of">“%1$s” is a form of %2$s</string>
+    <string name="meaning_similar">Similar: %1$s</string>
+    <string name="meaning_show_fewer">Show fewer meanings</string>
+    <plurals name="meaning_show_more">
+        <item quantity="one">Show %1$d more meaning</item>
+        <item quantity="other">Show %1$d more meanings</item>
+    </plurals>
+    <string name="meaning_not_found_hint">This word isn\'t in the offline dictionary. Names and very new words often aren\'t — try another word, or move a little closer.</string>
+    <string name="meaning_failed">Couldn\'t open the dictionary. Please try again.</string>
+
+    <string name="pos_noun">noun</string>
+    <string name="pos_verb">verb</string>
+    <string name="pos_adjective">adjective</string>
+    <string name="pos_adverb">adverb</string>
+</resources>

@@ -1,0 +1,71 @@
+name: Release APK
+
+# Publishing a GitHub release (gh release create vX.Y.Z) builds the signed
+# APK from that tag and attaches it to the release.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    name: Build & attach signed APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      TAG: ${{ github.event.release.tag_name }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Check the tag matches the app version
+        run: |
+          version=$(sed -n 's/^val appVersionName = "\(.*\)"$/\1/p' app/build.gradle.kts)
+          if [ "v$version" != "$TAG" ]; then
+            echo "::error::Tag $TAG does not match appVersionName $version in app/build.gradle.kts"
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Restore signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.WORDLENS_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_BASE64" ]; then
+            echo "::error::Signing secrets are not configured"
+            exit 1
+          fi
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/wordlens-release.jks"
+          echo "WORDLENS_KEYSTORE_PATH=$RUNNER_TEMP/wordlens-release.jks" >> "$GITHUB_ENV"
+
+      - name: Test & build signed release APK
+        env:
+          WORDLENS_KEYSTORE_PASSWORD: ${{ secrets.WORDLENS_KEYSTORE_PASSWORD }}
+          WORDLENS_KEY_ALIAS: ${{ secrets.WORDLENS_KEY_ALIAS }}
+          WORDLENS_KEY_PASSWORD: ${{ secrets.WORDLENS_KEY_PASSWORD }}
+        run: ./gradlew testDebugUnitTest assembleRelease
+
+      - name: Verify signature
+        run: |
+          apksigner=$(ls "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)
+          "$apksigner" verify --print-certs app/build/outputs/apk/release/app-release.apk
+
+      - name: Attach APK to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk "WordLens-$TAG.apk"
+          gh release upload "$TAG" "WordLens-$TAG.apk" --clobber
+
+      - name: Remove signing key
+        if: always()
+        run: rm -f "$RUNNER_TEMP/wordlens-release.jks"
