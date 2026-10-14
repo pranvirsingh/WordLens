@@ -48,6 +48,7 @@ All app code: `app/src/main/java/com/pranvirsingh/wordlens/`.
 | Online sources, timeouts, caching | `online/OnlineDictionary.kt`, `AppContainer` in `WordLensApplication.kt` |
 | How online + offline are merged | `meaning/MeaningPresenter.kt` |
 | Theme / online switch / About | `scan/SettingsMenu.kt`, `settings/AppSettings.kt` |
+| "New version available" check, banner, dialog | `update/UpdateChecker.kt`, `update/UpdateManager.kt`, `update/UpdateUi.kt` |
 | Open a word's card without a book (debug builds) | `adb shell am start -n com.pranvirsingh.wordlens.debug/com.pranvirsingh.wordlens.MainActivity --es lookup <word>` |
 | Colours / type | `ui/theme/Theme.kt` |
 | First-run / camera permission screen | `permission/CameraPermissionGate.kt` |

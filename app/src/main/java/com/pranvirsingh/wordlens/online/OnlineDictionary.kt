@@ -4,6 +4,7 @@ import com.pranvirsingh.wordlens.meaning.MeaningGroup
 import com.pranvirsingh.wordlens.meaning.MeaningSource
 import com.pranvirsingh.wordlens.meaning.OnlineSource
 import com.pranvirsingh.wordlens.meaning.RelatedWords
+import com.pranvirsingh.wordlens.util.getText
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
@@ -14,16 +15,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.suspendCancellableCoroutine
-import okhttp3.Call
-import okhttp3.Callback
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.Response
 import java.io.IOException
-import kotlin.coroutines.resumeWithException
 
 /**
  * Fetches plain-English meanings, examples, synonyms and opposites for a word
@@ -195,21 +190,7 @@ class OnlineDictionary(
         return get(url)?.let { DatamuseResponse.commonWords(it, exclude = word, limit = limit) }.orEmpty()
     }
 
-    /** The response body, or null for "404 not found". Anything else unexpected throws. */
-    private suspend fun get(url: HttpUrl): String? {
-        val request = Request.Builder()
-            .url(url)
-            .header("User-Agent", userAgent)
-            .header("Accept", "application/json")
-            .build()
-        return client.newCall(request).await().use { response ->
-            when {
-                response.code == 404 -> null
-                !response.isSuccessful -> throw IOException("HTTP ${response.code} from ${url.host}")
-                else -> response.body?.string() ?: throw IOException("Empty response from ${url.host}")
-            }
-        }
-    }
+    private suspend fun get(url: HttpUrl): String? = client.getText(url, userAgent, accept = "application/json")
 
     /** Network trouble, odd responses, even a parsing slip: all just mean "no answer from this source". */
     private suspend fun <T> attempt(block: suspend () -> T): Result<T> = try {
@@ -225,21 +206,4 @@ class OnlineDictionary(
         const val MAX_SYNONYMS = 6
         const val MAX_ANTONYMS = 4
     }
-}
-
-/** Runs the call without blocking a thread, and cancels it if the coroutine is cancelled. */
-private suspend fun Call.await(): Response = suspendCancellableCoroutine { continuation ->
-    continuation.invokeOnCancellation { cancel() }
-    enqueue(
-        object : Callback {
-            override fun onResponse(call: Call, response: Response) {
-                // If the caller gave up meanwhile, close the response instead of leaking it.
-                continuation.resume(response) { _, _, _ -> response.close() }
-            }
-
-            override fun onFailure(call: Call, e: IOException) {
-                continuation.resumeWithException(e)
-            }
-        },
-    )
 }

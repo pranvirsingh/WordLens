@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -30,12 +31,19 @@ import com.pranvirsingh.wordlens.BuildConfig
 import com.pranvirsingh.wordlens.R
 import com.pranvirsingh.wordlens.settings.AppSettings
 import com.pranvirsingh.wordlens.settings.ThemeMode
+import com.pranvirsingh.wordlens.update.AvailableUpdate
 
 /** The ⋮ menu on the scan screen: theme, online meanings on/off, and About. */
 @Composable
-fun SettingsMenu(settings: AppSettings) {
+fun SettingsMenu(
+    settings: AppSettings,
+    update: AvailableUpdate?,
+    onShowUpdate: () -> Unit,
+    onUpdateChecksChanged: (Boolean) -> Unit,
+) {
     val themeMode by settings.themeMode.collectAsStateWithLifecycle()
     val onlineMeanings by settings.onlineMeanings.collectAsStateWithLifecycle()
+    val updateChecks by settings.updateChecks.collectAsStateWithLifecycle()
     var open by rememberSaveable { mutableStateOf(false) }
     var showAbout by rememberSaveable { mutableStateOf(false) }
 
@@ -50,6 +58,24 @@ fun SettingsMenu(settings: AppSettings) {
             Icon(Icons.Rounded.MoreVert, contentDescription = stringResource(R.string.action_menu))
         }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            if (update != null) {
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            stringResource(R.string.update_menu, update.version),
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(Icons.Rounded.SystemUpdate, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    },
+                    onClick = {
+                        open = false
+                        onShowUpdate()
+                    },
+                )
+                HorizontalDivider()
+            }
             Text(
                 text = stringResource(R.string.menu_theme),
                 style = MaterialTheme.typography.labelMedium,
@@ -68,6 +94,11 @@ fun SettingsMenu(settings: AppSettings) {
                 text = { Text(stringResource(R.string.menu_online_meanings)) },
                 trailingIcon = { Switch(checked = onlineMeanings, onCheckedChange = null) },
                 onClick = { settings.setOnlineMeanings(!onlineMeanings) },
+            )
+            DropdownMenuItem(
+                text = { Text(stringResource(R.string.menu_update_checks)) },
+                trailingIcon = { Switch(checked = updateChecks, onCheckedChange = null) },
+                onClick = { onUpdateChecksChanged(!updateChecks) },
             )
             HorizontalDivider()
             DropdownMenuItem(

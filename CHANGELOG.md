@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.2.0 — 2026-10-15
+
+### New
+- WordLens now tells you when a new version is out, shows what's new, and takes you straight to the download
+
 ## v1.1.0 — 2026-10-15
 
 ### New

@@ -28,6 +28,16 @@ class AppSettings(context: Context) {
     /** When off, only the built-in offline dictionary is used and nothing is sent anywhere. */
     val onlineMeanings: StateFlow<Boolean> by lazy { _onlineMeanings.asStateFlow() }
 
+    private val _updateChecks by lazy { MutableStateFlow(prefs.getBoolean(KEY_UPDATES, true)) }
+
+    /** Whether WordLens may check GitHub for a newer version. */
+    val updateChecks: StateFlow<Boolean> by lazy { _updateChecks.asStateFlow() }
+
+    fun setUpdateChecks(enabled: Boolean) {
+        prefs.edit { putBoolean(KEY_UPDATES, enabled) }
+        _updateChecks.value = enabled
+    }
+
     fun setThemeMode(mode: ThemeMode) {
         prefs.edit { putString(KEY_THEME, mode.name) }
         _themeMode.value = mode
@@ -42,5 +52,6 @@ class AppSettings(context: Context) {
         const val FILE = "settings"
         const val KEY_THEME = "theme_mode"
         const val KEY_ONLINE = "online_meanings"
+        const val KEY_UPDATES = "update_checks"
     }
 }

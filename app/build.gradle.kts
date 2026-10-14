@@ -8,7 +8,7 @@ plugins {
 
 // Single source of truth for the app version. The release workflow refuses
 // to publish if the git tag (e.g. v1.2.0) doesn't match this.
-val appVersionName = "1.1.0"
+val appVersionName = "1.2.0"
 
 // Short fingerprint of the bundled dictionary; the app re-installs its copy whenever this changes.
 val dictionaryFingerprint = file("src/main/assets/dictionary/wordnet.db").let { db ->

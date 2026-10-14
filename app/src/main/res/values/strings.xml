@@ -46,6 +46,15 @@
     <string name="menu_about">About WordLens</string>
 
     <string name="about_title">WordLens %1$s</string>
-    <string name="about_body">Point your phone at any book and rest the lens on a word to see what it means.\n\nMeanings come from WordNet 3.0 (Princeton University), Simple English Wiktionary and Wiktionary (CC BY-SA), with similar and opposite words from Datamuse.\n\nPrivacy: the camera picture never leaves your phone. With simple online meanings on, the words you aim the lens at are sent (as plain text) to fetch their meanings — switch it off in the ⋮ menu to keep everything on your phone.</string>
+    <string name="about_body">Point your phone at any book and rest the lens on a word to see what it means.\n\nMeanings come from WordNet 3.0 (Princeton University), Simple English Wiktionary and Wiktionary (CC BY-SA), with similar and opposite words from Datamuse.\n\nPrivacy: the camera picture never leaves your phone. With update alerts on, WordLens asks GitHub now and then whether a newer version is out (an ordinary web request, like opening a page). Both can be switched off in the ⋮ menu. With simple online meanings on, the words you aim the lens at are sent (as plain text) to fetch their meanings.</string>
     <string name="action_ok">OK</string>
+
+    <string name="update_banner">WordLens %1$s is out — see what\'s new</string>
+    <string name="update_menu">Update to %1$s</string>
+    <string name="update_title">Update to WordLens %1$s</string>
+    <string name="update_download">Download%1$s</string>
+    <string name="update_later">Later</string>
+    <string name="update_no_notes">A new version is ready to install.</string>
+    <string name="update_link_copied">No browser found — the download link is copied, paste it into any browser.</string>
+    <string name="menu_update_checks">Update alerts</string>
 </resources>

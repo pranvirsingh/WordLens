@@ -1,7 +1,25 @@
 # Status
 
-**Current:** v1.1.0 (Simple meanings), built on `feat/wl-v1`. v1.0.0 shipped
-2026-10-14 (PR #1, release `v1.0.0` with its APK).
+**Current:** v1.2.0 (Update alerts), built on `feat/wl-v1`.
+
+Shipped so far:
+- v1.0.0, 2026-10-14 (PR #1)
+- v1.1.0, 2026-10-15 (PR #2)
+
+The repo is public under the MIT licence.
+
+## v1.2.0
+
+- `update/UpdateChecker.kt` reads GitHub's latest release: version, notes,
+  and the APK link.
+- `update/UpdateManager.kt` checks at most every 3 hours, caches the result,
+  and remembers a dismissed banner per version.
+- The UI (`update/UpdateUi.kt`) is a banner under the top bar, an "Update to
+  x.y.z" ⋮ menu item, and a What's-new dialog. Download hands the APK link to
+  the browser.
+- Professional README, LICENSE (MIT), and the GitHub About section.
+- Verified on a real phone against the live GitHub release feed: banner, ⋮ menu
+  item, and the What's-new dialog with its Download button. 155 tests pass.
 
 ## v1.1.0
 
@@ -33,4 +51,4 @@
 
 ## Next
 
-- v1.2.0 (My words): see [roadmap-v1.md](roadmap-v1.md).
+- v1.3.0 (My words): see [roadmap-v1.md](roadmap-v1.md).
