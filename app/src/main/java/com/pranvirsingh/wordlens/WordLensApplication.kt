@@ -7,6 +7,9 @@ import com.pranvirsingh.wordlens.dictionary.DictionaryRepository
 import com.pranvirsingh.wordlens.meaning.MeaningLookup
 import com.pranvirsingh.wordlens.online.OnlineDictionary
 import com.pranvirsingh.wordlens.settings.AppSettings
+import com.pranvirsingh.wordlens.update.SharedPrefsUpdateStore
+import com.pranvirsingh.wordlens.update.UpdateChecker
+import com.pranvirsingh.wordlens.update.UpdateManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -42,10 +45,35 @@ class AppContainer(application: Application) {
         .callTimeout(5, TimeUnit.SECONDS)
         .build()
 
-    private val onlineDictionary = OnlineDictionary(
-        client = httpClient,
-        userAgent = "WordLens/${BuildConfig.VERSION_NAME} (https://github.com/pranvirsingh/WordLens)",
+    private val userAgent = "WordLens/${BuildConfig.VERSION_NAME} (https://github.com/pranvirsingh/WordLens)"
+
+    private val onlineDictionary = OnlineDictionary(client = httpClient, userAgent = userAgent)
+
+    // Update checks run in the background with no reader waiting, so they can be patient.
+    private val updateClient = httpClient.newBuilder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(15, TimeUnit.SECONDS)
+        .callTimeout(20, TimeUnit.SECONDS)
+        .build()
+
+    val updates = UpdateManager(
+        store = SharedPrefsUpdateStore(application),
+        checker = UpdateChecker(client = updateClient, userAgent = userAgent),
+        currentVersion = BuildConfig.VERSION_NAME,
+        // Development builds are a separate app that release APKs can't update.
+        enabled = { !BuildConfig.DEBUG && settings.updateChecks.value },
     )
+
+    /** See whether a newer version has been released (rate-limited inside UpdateManager). */
+    fun checkForUpdates() {
+        appScope.launch { updates.refresh() }
+    }
+
+    fun setUpdateChecks(enabled: Boolean) {
+        settings.setUpdateChecks(enabled)
+        updates.onEnabledChanged()
+        if (enabled) checkForUpdates()
+    }
 
     val meanings = MeaningLookup(
         dictionary = dictionary,

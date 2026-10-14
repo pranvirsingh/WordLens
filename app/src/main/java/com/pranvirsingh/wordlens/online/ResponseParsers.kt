@@ -2,6 +2,7 @@ package com.pranvirsingh.wordlens.online
 
 import com.pranvirsingh.wordlens.meaning.MeaningGroup
 import com.pranvirsingh.wordlens.meaning.MeaningSense
+import com.pranvirsingh.wordlens.util.stringField
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -17,19 +18,17 @@ private fun parseJson(body: String) = try {
     throw MalformedResponseException("Not JSON: ${e.message}")
 }
 
-private fun JsonObject.string(key: String): String? = (this[key] as? JsonPrimitive)?.contentOrNull
-
 /** The MediaWiki "parse" API: either the page's wikitext, or "no such page". */
 object SimpleWiktionaryResponse {
     /** Returns the wikitext, or null when the page doesn't exist. */
     fun wikitext(body: String): String? {
         val root = parseJson(body) as? JsonObject ?: throw MalformedResponseException("Expected an object")
         (root["error"] as? JsonObject)?.let { error ->
-            if (error.string("code") == "missingtitle") return null
-            throw MalformedResponseException("Wiki error: ${error.string("code")}")
+            if (error.stringField("code") == "missingtitle") return null
+            throw MalformedResponseException("Wiki error: ${error.stringField("code")}")
         }
         val parse = root["parse"] as? JsonObject ?: throw MalformedResponseException("No 'parse' section")
-        return parse.string("wikitext") ?: throw MalformedResponseException("No wikitext")
+        return parse.stringField("wikitext") ?: throw MalformedResponseException("No wikitext")
     }
 }
 
@@ -47,11 +46,11 @@ object WiktionaryResponse {
         val english = root["en"] as? JsonArray ?: return emptyList()
         return english.mapNotNull { element ->
             val usage = element as? JsonObject ?: return@mapNotNull null
-            val pos = usage.string("partOfSpeech")?.lowercase()?.takeIf { it in wordClasses } ?: return@mapNotNull null
+            val pos = usage.stringField("partOfSpeech")?.lowercase()?.takeIf { it in wordClasses } ?: return@mapNotNull null
             val senses = (usage["definitions"] as? JsonArray).orEmpty().mapNotNull { item ->
                 val definition = item as? JsonObject ?: return@mapNotNull null
                 // A definition can carry nested sub-senses after a line break; the first line is the sense.
-                val text = definition.string("definition")?.let(::htmlToText)?.lines()?.firstOrNull()?.trim()
+                val text = definition.stringField("definition")?.let(::htmlToText)?.lines()?.firstOrNull()?.trim()
                 if (text.isNullOrEmpty()) return@mapNotNull null
                 val examples = (definition["examples"] as? JsonArray).orEmpty()
                     .mapNotNull { (it as? JsonPrimitive)?.contentOrNull?.let(::htmlToText)?.trim() }
@@ -77,7 +76,7 @@ object DatamuseResponse {
         val root = parseJson(body) as? JsonArray ?: throw MalformedResponseException("Expected a list")
         return root.mapNotNull { element ->
             val item = element as? JsonObject ?: return@mapNotNull null
-            val word = item.string("word")?.trim() ?: return@mapNotNull null
+            val word = item.stringField("word")?.trim() ?: return@mapNotNull null
             val frequency = (item["tags"] as? JsonArray).orEmpty()
                 .mapNotNull { (it as? JsonPrimitive)?.contentOrNull }
                 .firstOrNull { it.startsWith("f:") }

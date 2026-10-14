@@ -11,6 +11,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -53,11 +54,24 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pranvirsingh.wordlens.R
 import com.pranvirsingh.wordlens.settings.AppSettings
+import com.pranvirsingh.wordlens.update.AvailableUpdate
+import com.pranvirsingh.wordlens.update.UpdateBanner
+import com.pranvirsingh.wordlens.update.UpdateDialog
+import com.pranvirsingh.wordlens.update.UpdateManager
 import com.pranvirsingh.wordlens.ui.theme.Highlighter
 import com.pranvirsingh.wordlens.ui.theme.SystemBarIcons
 
 @Composable
-fun ScanScreen(viewModel: ScanViewModel, settings: AppSettings, debugWord: String? = null) {
+fun ScanScreen(
+    viewModel: ScanViewModel,
+    settings: AppSettings,
+    updates: UpdateManager,
+    onUpdateChecksChanged: (Boolean) -> Unit,
+    debugWord: String? = null,
+) {
+    val availableUpdate by updates.available.collectAsStateWithLifecycle()
+    val showUpdateBanner by updates.bannerVisible.collectAsStateWithLifecycle()
+    var showUpdateDialog by rememberSaveable { mutableStateOf(false) }
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val view = LocalView.current
@@ -116,13 +130,34 @@ fun ScanScreen(viewModel: ScanViewModel, settings: AppSettings, debugWord: Strin
             target = state.target,
             modifier = Modifier.fillMaxSize(),
         )
-        TopBar(
-            hasTorch = hasTorch,
-            torchOn = torchOn,
-            onToggleTorch = { torchOn = !torchOn },
-            settings = settings,
-            modifier = Modifier.align(Alignment.TopCenter),
-        )
+        Column(
+            Modifier.align(Alignment.TopCenter),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            TopBar(
+                hasTorch = hasTorch,
+                torchOn = torchOn,
+                onToggleTorch = { torchOn = !torchOn },
+                settings = settings,
+                update = availableUpdate,
+                onShowUpdate = { showUpdateDialog = true },
+                onUpdateChecksChanged = onUpdateChecksChanged,
+            )
+            val update = availableUpdate
+            AnimatedVisibility(visible = showUpdateBanner && update != null && state.card == MeaningCard.Hidden) {
+                if (update != null) {
+                    UpdateBanner(
+                        update = update,
+                        onOpen = { showUpdateDialog = true },
+                        onDismiss = updates::dismissBanner,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
+        }
+        availableUpdate?.takeIf { showUpdateDialog }?.let { update ->
+            UpdateDialog(update, onDismiss = { showUpdateDialog = false })
+        }
         AnimatedVisibility(
             visible = state.card == MeaningCard.Hidden,
             enter = fadeIn(),
@@ -162,6 +197,9 @@ private fun TopBar(
     torchOn: Boolean,
     onToggleTorch: () -> Unit,
     settings: AppSettings,
+    update: AvailableUpdate?,
+    onShowUpdate: () -> Unit,
+    onUpdateChecksChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -190,7 +228,7 @@ private fun TopBar(
             }
             Spacer(Modifier.width(8.dp))
         }
-        SettingsMenu(settings)
+        SettingsMenu(settings, update, onShowUpdate, onUpdateChecksChanged)
     }
 }
 

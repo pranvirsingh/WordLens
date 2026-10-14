@@ -39,7 +39,15 @@ examples, similar and opposite words), with no AI and no key or usage limits.
 AI explanations (Gemini) were considered and **dropped by the owner's
 choice**: daily limits, and a key to manage.
 
-## v1.2.0 — My words
+## v1.2.0 — Update alerts (done)
+
+- The app checks the repo's latest GitHub release (at most every 3 hours) and
+  shows an "update available" banner, a ⋮ menu item, and a What's-new dialog.
+  The Download button opens the release APK.
+- The repo went public under the MIT licence, which is what makes the release
+  feed readable without an account.
+
+## v1.3.0 — My words
 
 - Every looked-up word is saved with its sentence: a personal word list.
 - Browse, search, and delete entries, with "looked up 3 times" counts.

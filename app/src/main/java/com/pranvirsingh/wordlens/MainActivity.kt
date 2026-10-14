@@ -40,11 +40,19 @@ class MainActivity : ComponentActivity() {
                     ScanScreen(
                         viewModel = viewModel(factory = scanFactory),
                         settings = container.settings,
+                        updates = container.updates,
+                        onUpdateChecksChanged = container::setUpdateChecks,
                         debugWord = debugWord,
                     )
                 }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        // Each time the app comes to the front; UpdateManager decides whether a check is due.
+        (application as WordLensApplication).container.checkForUpdates()
     }
 
     private companion object {
