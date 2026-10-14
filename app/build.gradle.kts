@@ -81,10 +81,13 @@ android {
         warningsAsErrors = true
         checkDependencies = false
         disable += setOf(
-            // New library versions appear constantly; upgrades are deliberate, not a build failure.
+            // New library/SDK versions appear constantly, and which ones lint knows about
+            // depends on the machine's installed SDK. Upgrades are deliberate, tested
+            // changes — not something that should fail a build on one machine but not another.
             "GradleDependency",
             "NewerVersionAvailable",
             "AndroidGradlePluginVersion",
+            "OldTargetApi",
             // ARM-only on purpose (see abiFilters); ChromeOS runs ARM apps through translation.
             "ChromeOsAbiSupport",
         )
