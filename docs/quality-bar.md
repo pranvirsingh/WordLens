@@ -25,4 +25,8 @@ version holds to this, not just a final polish pass.
 - **Verified on a real phone** before any version that changes what a reader
   sees is called done. "It compiles" is not proof it works.
 - **Small and private.** Release builds are shrunk (R8) and ARM-only. The
-  camera image never leaves the phone.
+  camera image never leaves the phone. Online meanings send only the words
+  the lens is aimed at (as text), and the reader can switch them off.
+- **Online never slows the reader down.** The offline meaning is always shown
+  first, online calls have tight timeouts, and any online failure falls back
+  silently to the offline meaning.

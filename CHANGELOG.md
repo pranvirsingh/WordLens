@@ -1,5 +1,15 @@
 # Changelog
 
+## v1.1.0 — 2026-10-15
+
+### New
+- Meanings now read like everyday English, with short example sentences
+- "Similar" and "Opposite" words under every meaning; tap one to look it up, then press back to return
+- See how a word is pronounced, written out
+- Meanings start loading while you're still aiming, so they show up faster
+- Choose Light, Dark or Match phone from the new ⋮ menu
+- Switch online meanings off any time; the built-in dictionary still works with no internet
+
 ## v1.0.0 — 2026-10-14
 
 ### New

@@ -9,7 +9,6 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
@@ -53,11 +52,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.pranvirsingh.wordlens.R
+import com.pranvirsingh.wordlens.settings.AppSettings
 import com.pranvirsingh.wordlens.ui.theme.Highlighter
 import com.pranvirsingh.wordlens.ui.theme.SystemBarIcons
 
 @Composable
-fun ScanScreen(viewModel: ScanViewModel) {
+fun ScanScreen(viewModel: ScanViewModel, settings: AppSettings, debugWord: String? = null) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     val view = LocalView.current
@@ -67,18 +67,24 @@ fun ScanScreen(viewModel: ScanViewModel) {
 
     SystemBarIcons(dark = false)
 
+    // Once per launch — not again when the screen is rebuilt (rotation reuses the same intent).
+    var debugWordHandled by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(debugWord) {
+        if (debugWord != null && !debugWordHandled) {
+            debugWordHandled = true
+            viewModel.lookUpRelated(debugWord)
+        }
+    }
+
     // Readers hold the phone still for long stretches; don't let the screen sleep mid-page.
     DisposableEffect(view) {
         view.keepScreenOn = true
         onDispose { view.keepScreenOn = false }
     }
 
-    // Saved across rotation/theme changes so the tick plays once per lookup, not per screen rebuild.
-    val foundId = (state.card as? MeaningCard.Found)?.id
-    var lastTickedId by rememberSaveable { mutableStateOf<Long?>(null) }
-    LaunchedEffect(foundId) {
-        if (foundId != null && foundId != lastTickedId) {
-            lastTickedId = foundId
+    // A gentle tick each time a new meaning lands.
+    LaunchedEffect(viewModel) {
+        viewModel.meaningLanded.collect {
             val feedback = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 HapticFeedbackConstants.CONFIRM
             } else {
@@ -88,7 +94,9 @@ fun ScanScreen(viewModel: ScanViewModel) {
         }
     }
 
-    BackHandler(enabled = state.card != MeaningCard.Hidden) { viewModel.dismissCard() }
+    BackHandler(enabled = state.card != MeaningCard.Hidden) {
+        if (!viewModel.goBack()) viewModel.dismissCard()
+    }
 
     BoxWithConstraints(
         Modifier
@@ -112,6 +120,7 @@ fun ScanScreen(viewModel: ScanViewModel) {
             hasTorch = hasTorch,
             torchOn = torchOn,
             onToggleTorch = { torchOn = !torchOn },
+            settings = settings,
             modifier = Modifier.align(Alignment.TopCenter),
         )
         AnimatedVisibility(
@@ -139,6 +148,8 @@ fun ScanScreen(viewModel: ScanViewModel) {
             // Never cover the lens: the card stops just below it.
             maxHeight = maxHeight * (1f - ScanLayout.LENS_Y_FRACTION) - 56.dp,
             onSpeak = viewModel::speak,
+            onRelatedWord = viewModel::lookUpRelated,
+            onBack = { viewModel.goBack() },
             onDismiss = viewModel::dismissCard,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
@@ -150,6 +161,7 @@ private fun TopBar(
     hasTorch: Boolean,
     torchOn: Boolean,
     onToggleTorch: () -> Unit,
+    settings: AppSettings,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -158,9 +170,9 @@ private fun TopBar(
             .statusBarsPadding()
             .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Wordmark()
+        Spacer(Modifier.weight(1f))
         if (hasTorch) {
             IconButton(
                 onClick = onToggleTorch,
@@ -176,7 +188,9 @@ private fun TopBar(
                     ),
                 )
             }
+            Spacer(Modifier.width(8.dp))
         }
+        SettingsMenu(settings)
     }
 }
 

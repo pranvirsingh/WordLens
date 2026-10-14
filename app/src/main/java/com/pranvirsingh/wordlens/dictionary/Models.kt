@@ -19,6 +19,7 @@ data class SenseRecord(
     val definition: String,
     val examples: List<String>,
     val lemmas: List<String>,
+    val antonyms: List<String> = emptyList(),
 )
 
 /** One meaning, ready to show. */
@@ -26,6 +27,7 @@ data class Sense(
     val definition: String,
     val examples: List<String>,
     val synonyms: List<String>,
+    val antonyms: List<String> = emptyList(),
 )
 
 /** All meanings of one word used as one part of speech, e.g. "run" as a verb. */

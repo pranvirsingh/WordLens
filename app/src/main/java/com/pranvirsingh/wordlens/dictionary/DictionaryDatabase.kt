@@ -70,6 +70,7 @@ class DictionaryDatabase(context: Context) {
                                 definition = cursor.getString(3),
                                 examples = DictionarySql.splitList(cursor.getString(4)),
                                 lemmas = DictionarySql.splitList(cursor.getString(5)),
+                                antonyms = DictionarySql.splitList(cursor.getString(6)),
                             ),
                         )
                     }
@@ -96,13 +97,16 @@ class DictionaryDatabase(context: Context) {
 /** The queries against the dictionary file (schema: tools/build_dictionary.py). */
 internal object DictionarySql {
     const val SENSES = """
-        SELECT ls.pos, ls.rank, ls.tag_count, s.definition, s.examples, s.lemmas
+        SELECT ls.pos, ls.rank, ls.tag_count, s.definition, s.examples, s.lemmas,
+            (SELECT group_concat(a.antonym, char(10)) FROM antonyms a
+             WHERE a.lemma = ls.lemma AND a.synset_id = ls.synset_id)
         FROM lemma_senses ls JOIN synsets s ON s.id = ls.synset_id
         WHERE ls.lemma = ?
         ORDER BY ls.pos, ls.rank
     """
     const val EXCEPTIONS = "SELECT pos, base FROM exceptions WHERE form = ?"
 
-    /** Lists (examples, synonyms) are stored newline-separated. */
-    fun splitList(stored: String): List<String> = stored.split('\n').filter { it.isNotBlank() }
+    /** Lists (examples, synonyms, antonyms) are stored newline-separated; null means none. */
+    fun splitList(stored: String?): List<String> =
+        stored?.split('\n')?.filter { it.isNotBlank() }.orEmpty()
 }

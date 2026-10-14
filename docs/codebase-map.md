@@ -15,7 +15,16 @@ All app code: `app/src/main/java/com/pranvirsingh/wordlens/`.
    - `text/DwellTracker.kt` decides when the lens has rested long enough
      (650 ms). Then it looks the word up once.
    - `text/SentenceExtractor.kt` recovers the sentence around the word.
-3. `dictionary/DictionaryRepository.kt` uses `dictionary/Lemmatizer.kt`
+3. `meaning/MeaningLookup.kt` runs the lookup in two steps:
+   - offline first, which shows instantly;
+   - then `online/OnlineDictionary.kt`: Simple English Wiktionary, then full
+     Wiktionary, plus Datamuse, all in parallel and cached.
+
+   `meaning/MeaningPresenter.kt` merges both into one `WordMeaning`. Wiki
+   markup is read by `online/WikitextParser.kt`; the JSON responses by
+   `online/ResponseParsers.kt`.
+
+   The offline step itself: `dictionary/DictionaryRepository.kt` uses `dictionary/Lemmatizer.kt`
    ("running" → "run", "went" → "go") against `dictionary/DictionaryDatabase.kt`.
    That is the SQLite file from `assets/dictionary/wordnet.db`, copied to
    private storage on first use. Readings are ranked most-common-first.
@@ -36,6 +45,10 @@ All app code: `app/src/main/java/com/pranvirsingh/wordlens/`.
 | Meaning ranking / synonyms shown | `dictionary/DictionaryRepository.kt` |
 | Dictionary content or schema | `tools/build_dictionary.py` (then rebuild the `.db`) |
 | Card layout / copy | `scan/MeaningSheet.kt`, `res/values/strings.xml` |
+| Online sources, timeouts, caching | `online/OnlineDictionary.kt`, `AppContainer` in `WordLensApplication.kt` |
+| How online + offline are merged | `meaning/MeaningPresenter.kt` |
+| Theme / online switch / About | `scan/SettingsMenu.kt`, `settings/AppSettings.kt` |
+| Open a word's card without a book (debug builds) | `adb shell am start -n com.pranvirsingh.wordlens.debug/com.pranvirsingh.wordlens.MainActivity --es lookup <word>` |
 | Colours / type | `ui/theme/Theme.kt` |
 | First-run / camera permission screen | `permission/CameraPermissionGate.kt` |
 | App version | `app/build.gradle.kts` → `appVersionName` |

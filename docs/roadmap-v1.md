@@ -17,14 +17,27 @@ The core loop, fully offline.
 - Welcome / camera-permission screen, including the "denied for good" path.
 - CI on every PR, plus a signed APK attached to every GitHub release.
 
-## v1.1.0 — In your sentence
+## v1.1.0 — Simple meanings (done)
 
-- An AI explanation of what the word means **in this exact sentence**, in very
-  simple words. It uses the sentence WordLens already captures.
-- Uses the owner's own free Gemini API key, entered in a new Settings screen
-  and stored encrypted on the phone. The offline meaning still shows
-  instantly; the AI part loads in below it and never blocks.
-- Settings: AI on/off, key, hold-still speed.
+The owner's feedback on v1.0.0: the offline dictionary's wording is too
+formal. They wanted meanings that read like Google's (plain words, short
+examples, similar and opposite words), with no AI and no key or usage limits.
+
+- **Offline first, always.** The WordNet meaning still appears instantly, and
+  WordNet antonyms are now included.
+- **Online upgrade, no key.** Simple English Wiktionary supplies everyday
+  definitions and examples, with the full English Wiktionary as a fallback.
+  Datamuse adds common synonyms and opposites. All three are asked in
+  parallel, with tight timeouts and in-memory caching.
+- **Feels instant.** Fetching starts as soon as the lens settles on a word,
+  usually before the hold-still timer finishes.
+- New card layout: pronunciation, example bubbles, and **Similar** and
+  **Opposite** chips. Tapping a chip opens that word, and Back returns.
+- ⋮ menu: theme (Match phone / Light / Dark), an online meanings on/off
+  switch, and About (credits and privacy).
+
+AI explanations (Gemini) were considered and **dropped by the owner's
+choice**: daily limits, and a key to manage.
 
 ## v1.2.0 — My words
 
