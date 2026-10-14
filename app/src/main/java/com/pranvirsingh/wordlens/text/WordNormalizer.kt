@@ -17,6 +17,19 @@ object WordNormalizer {
     private val apostrophes = charArrayOf('’', '‘', 'ʼ', '`', '´')
     private val hyphens = charArrayOf('‐', '‑', '‒', '­')
 
+    /**
+     * Lookup key for a word or short phrase chosen on the card ("ice cream",
+     * "look after") rather than read off the page, so spaces are allowed.
+     */
+    fun normalizePhrase(text: String): String? {
+        val s = unify(text).trim().lowercase(Locale.ROOT).replace(whitespace, " ")
+        if (s.length < MIN_LENGTH || s.none { it.isLetter() }) return null
+        if (!s.all { it.isLetter() || it == ' ' || it == '\'' || it == '-' }) return null
+        return s
+    }
+
+    private val whitespace = Regex("\\s+")
+
     /** Unifies look-alike apostrophes and hyphens, keeping the original case. */
     fun clean(raw: String): String = unify(raw).trim { !it.isLetter() }
 

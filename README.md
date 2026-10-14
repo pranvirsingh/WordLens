@@ -5,7 +5,9 @@ who read physical books. Hold your phone over the page and rest the lens on a
 word: a highlighter sweeps across it, and its meaning slides up in under a
 second. No typing, no searching, and the book stays in your hands.
 
-- Works fully **offline**. Text is read on the phone, and the dictionary is
+- Simple, everyday meanings with short examples, plus similar and opposite
+  words you can tap. These come online from Wiktionary, with no account or key.
+- Works **offline** too. Text is read on the phone, and a full dictionary is
   built in.
 - The most common meaning comes first, with an example, similar words and
   pronunciation.
@@ -35,6 +37,12 @@ py -I tools/build_dictionary.py <wordnet-dict-dir> app/src/main/assets/dictionar
 
 ## Credits and licences
 
-The dictionary data is **WordNet 3.0**, Copyright 2006 by Princeton
-University, used under the WordNet licence. The full notice ships inside the
-app at `app/src/main/assets/licenses/wordnet-license.txt`.
+- The offline dictionary is **WordNet 3.0**, Copyright 2006 by Princeton
+  University, used under the WordNet licence. The full notice ships inside the
+  app at `app/src/main/assets/licenses/wordnet-license.txt`.
+- Online meanings come from **Simple English Wiktionary** and **Wiktionary**
+  (CC BY-SA), and similar/opposite words from **Datamuse**. The card always
+  names its source.
+
+The camera picture never leaves the phone. With online meanings on, only the
+words the lens is aimed at are sent (as text), and this can be switched off.

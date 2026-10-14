@@ -6,6 +6,8 @@
         android:required="true" />
 
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Words the lens is aimed at (plain text only) are sent to fetch plain-English meanings; the reader can switch this off. -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Lets the app find the phone's text-to-speech engine for pronunciations. -->
     <queries>

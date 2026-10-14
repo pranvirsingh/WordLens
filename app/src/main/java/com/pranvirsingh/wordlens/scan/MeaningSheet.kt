@@ -13,10 +13,13 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -33,13 +36,17 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -54,6 +61,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.pluralStringResource
@@ -64,16 +72,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.pranvirsingh.wordlens.R
-import com.pranvirsingh.wordlens.dictionary.Entry
-import com.pranvirsingh.wordlens.dictionary.PartOfSpeech
-import com.pranvirsingh.wordlens.dictionary.Sense
+import com.pranvirsingh.wordlens.meaning.MeaningGroup
+import com.pranvirsingh.wordlens.meaning.MeaningSense
+import com.pranvirsingh.wordlens.meaning.MeaningSource
 import com.pranvirsingh.wordlens.ui.theme.Highlighter
 import com.pranvirsingh.wordlens.ui.theme.PartOfSpeechStyle
 import kotlinx.coroutines.launch
+import java.util.Locale
 import kotlin.math.roundToInt
 
-private const val COLLAPSED_SENSES = 3
-private const val MAX_SENSES_PER_ENTRY = 8
+private const val COLLAPSED_SENSES = 2
 
 /**
  * The meaning card. Rises from the bottom when a word is looked up and stays
@@ -85,6 +93,8 @@ fun MeaningSheet(
     canSpeak: Boolean,
     maxHeight: Dp,
     onSpeak: (String) -> Unit,
+    onRelatedWord: (String) -> Unit,
+    onBack: () -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -100,7 +110,9 @@ fun MeaningSheet(
         enter = slideInVertically(tween(260)) { it } + fadeIn(tween(200)),
         exit = slideOutVertically(tween(220)) { it } + fadeOut(tween(180)),
     ) {
-        lastShown.card?.let { SheetSurface(it, canSpeak, maxHeight, onSpeak, onDismiss) }
+        lastShown.card?.let {
+            SheetSurface(it, canSpeak, maxHeight, onSpeak, onRelatedWord, onBack, onDismiss)
+        }
     }
 }
 
@@ -114,6 +126,8 @@ private fun SheetSurface(
     canSpeak: Boolean,
     maxHeight: Dp,
     onSpeak: (String) -> Unit,
+    onRelatedWord: (String) -> Unit,
+    onBack: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     val scope = rememberCoroutineScope()
@@ -154,10 +168,19 @@ private fun SheetSurface(
                 },
             ) {
                 DragHandle()
-                SheetHeader(card, canSpeak, onSpeak, onDismiss)
+                SheetHeader(card, canSpeak, onSpeak, onBack, onDismiss)
+                val enriching = (card as? MeaningCard.Found)?.enriching == true
+                Box(Modifier.height(2.dp).fillMaxWidth()) {
+                    if (enriching) {
+                        LinearProgressIndicator(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).alpha(0.6f),
+                            trackColor = Color.Transparent,
+                        )
+                    }
+                }
             }
             when (card) {
-                is MeaningCard.Found -> FoundBody(card)
+                is MeaningCard.Found -> FoundBody(card, onRelatedWord)
                 is MeaningCard.Loading -> LoadingBody()
                 is MeaningCard.NotFound -> MessageBody(stringResource(R.string.meaning_not_found_hint))
                 is MeaningCard.Failed -> MessageBody(stringResource(R.string.meaning_failed))
@@ -189,19 +212,25 @@ private fun SheetHeader(
     card: MeaningCard,
     canSpeak: Boolean,
     onSpeak: (String) -> Unit,
+    onBack: () -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val headword = when (card) {
-        is MeaningCard.Found -> card.result.entries.first().lemma
-        is MeaningCard.Loading -> card.word
-        is MeaningCard.NotFound -> card.word
-        is MeaningCard.Failed -> card.word
-        MeaningCard.Hidden -> ""
+    val (headword, canGoBack) = when (card) {
+        is MeaningCard.Found -> card.meaning.headword to card.canGoBack
+        is MeaningCard.Loading -> card.word to card.canGoBack
+        is MeaningCard.NotFound -> card.word to card.canGoBack
+        is MeaningCard.Failed -> card.word to card.canGoBack
+        MeaningCard.Hidden -> "" to false
     }
     Row(
-        Modifier.padding(start = 24.dp, end = 8.dp, top = 4.dp),
+        Modifier.padding(start = if (canGoBack) 8.dp else 24.dp, end = 8.dp, top = 4.dp, bottom = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (canGoBack) {
+            IconButton(onClick = onBack) {
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.action_back))
+            }
+        }
         Column(Modifier.weight(1f)) {
             Text(
                 text = headword,
@@ -210,20 +239,26 @@ private fun SheetHeader(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            if (card is MeaningCard.Found && !card.word.equals(headword, ignoreCase = true)) {
-                Text(
-                    text = stringResource(R.string.meaning_form_of, card.word, headword),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+            if (card is MeaningCard.Found) {
+                val details = listOfNotNull(
+                    card.meaning.pronunciation,
+                    stringResource(R.string.meaning_form_of, card.word, headword)
+                        .takeIf { !card.word.equals(headword, ignoreCase = true) },
+                ).joinToString("  ·  ")
+                if (details.isNotEmpty()) {
+                    Text(
+                        text = details,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
         if (card is MeaningCard.Found && canSpeak) {
-            IconButton(onClick = { onSpeak(headword) }) {
+            FilledTonalIconButton(onClick = { onSpeak(headword) }) {
                 Icon(
                     Icons.AutoMirrored.Rounded.VolumeUp,
                     contentDescription = stringResource(R.string.action_pronounce, headword),
-                    tint = MaterialTheme.colorScheme.primary,
                 )
             }
         }
@@ -238,36 +273,31 @@ private fun SheetHeader(
 }
 
 @Composable
-private fun FoundBody(card: MeaningCard.Found) {
+private fun FoundBody(card: MeaningCard.Found, onRelatedWord: (String) -> Unit) {
     var expanded by remember(card.id) { mutableStateOf(false) }
-    val entries = card.result.entries
-    val primary = entries.first()
-    val hiddenCount = (primary.senses.size.coerceAtMost(MAX_SENSES_PER_ENTRY) - COLLAPSED_SENSES).coerceAtLeast(0) +
-        entries.drop(1).sumOf { it.senses.size.coerceAtMost(MAX_SENSES_PER_ENTRY) }
+    val meaning = card.meaning
+    val totalSenses = meaning.groups.sumOf { it.senses.size }
+    val shownWhenCollapsed = meaning.groups.first().senses.size.coerceAtMost(COLLAPSED_SENSES)
+    val hiddenCount = totalSenses - shownWhenCollapsed
 
     Column(
         Modifier
             .verticalScroll(rememberScrollState())
             .animateContentSize()
-            .padding(start = 24.dp, end = 24.dp, bottom = 16.dp),
+            .padding(start = 24.dp, end = 24.dp, top = 8.dp, bottom = 12.dp),
     ) {
         card.sentence?.let { PageQuote(it) }
-        EntryBlock(
-            entry = primary,
-            limit = if (expanded) MAX_SENSES_PER_ENTRY else COLLAPSED_SENSES,
-            showLemma = false,
-        )
-        if (expanded) {
-            entries.drop(1).forEach { entry ->
-                HorizontalDivider(Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outlineVariant)
-                EntryBlock(entry = entry, limit = MAX_SENSES_PER_ENTRY, showLemma = entry.lemma != primary.lemma)
+
+        val groups = if (expanded) meaning.groups else meaning.groups.take(1)
+        groups.forEachIndexed { index, group ->
+            if (index > 0) {
+                HorizontalDivider(Modifier.padding(vertical = 14.dp), color = MaterialTheme.colorScheme.outlineVariant)
             }
+            GroupBlock(group, limit = if (expanded) Int.MAX_VALUE else COLLAPSED_SENSES)
         }
+
         if (hiddenCount > 0) {
-            TextButton(
-                onClick = { expanded = !expanded },
-                modifier = Modifier.padding(top = 4.dp),
-            ) {
+            TextButton(onClick = { expanded = !expanded }, modifier = Modifier.padding(top = 2.dp)) {
                 Text(
                     if (expanded) {
                         stringResource(R.string.meaning_show_fewer)
@@ -279,6 +309,15 @@ private fun FoundBody(card: MeaningCard.Found) {
                 Icon(if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore, contentDescription = null)
             }
         }
+
+        if (meaning.similar.isNotEmpty()) {
+            WordChips(stringResource(R.string.meaning_similar), meaning.similar, onRelatedWord)
+        }
+        if (meaning.opposite.isNotEmpty()) {
+            WordChips(stringResource(R.string.meaning_opposite), meaning.opposite, onRelatedWord)
+        }
+
+        SourceLine(meaning.source, card.offlineOnly)
     }
 }
 
@@ -288,7 +327,7 @@ private fun PageQuote(sentence: String) {
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(top = 4.dp, bottom = 12.dp),
+            .padding(bottom = 14.dp),
     ) {
         Box(
             Modifier
@@ -310,70 +349,142 @@ private fun PageQuote(sentence: String) {
 }
 
 @Composable
-private fun EntryBlock(entry: Entry, limit: Int, showLemma: Boolean) {
+private fun GroupBlock(group: MeaningGroup, limit: Int) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        if (showLemma) {
+        group.otherWord?.let { word ->
             Text(
-                text = entry.lemma,
+                text = word,
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
             )
             Spacer(Modifier.width(8.dp))
         }
         Text(
-            text = stringResource(entry.pos.labelRes()).uppercase(),
+            text = group.partOfSpeech.uppercase(Locale.getDefault()),
             style = PartOfSpeechStyle,
             color = MaterialTheme.colorScheme.secondary,
         )
     }
     Spacer(Modifier.height(8.dp))
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        entry.senses.take(limit).forEachIndexed { index, sense -> SenseRow(index + 1, sense) }
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        val numbered = group.senses.size > 1
+        group.senses.take(limit).forEachIndexed { index, sense -> SenseBlock(if (numbered) index + 1 else null, sense) }
     }
 }
 
 @Composable
-private fun SenseRow(number: Int, sense: Sense) {
+private fun SenseBlock(number: Int?, sense: MeaningSense) {
     Row {
-        Box(
-            Modifier
-                .padding(top = 2.dp)
-                .size(22.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.primaryContainer),
-            contentAlignment = Alignment.Center,
-        ) {
-            Text(
-                text = number.toString(),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-            )
+        if (number != null) {
+            Box(
+                Modifier
+                    .padding(top = 2.dp)
+                    .size(22.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = number.toString(),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+            Spacer(Modifier.width(12.dp))
         }
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            sense.label?.let { label ->
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontStyle = FontStyle.Italic,
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+            }
             Text(
-                text = sense.definition.replaceFirstChar { it.uppercase() },
+                text = sense.definition,
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurface,
             )
-            sense.examples.firstOrNull()?.let { example ->
+            sense.examples.forEach { ExampleBubble(it) }
+        }
+    }
+}
+
+/** An example sentence in a soft speech-bubble, like a line someone actually said. */
+@Composable
+private fun ExampleBubble(example: String) {
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 16.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+    ) {
+        Text(
+            text = example,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun WordChips(title: String, words: List<String>, onWord: (String) -> Unit) {
+    Column(Modifier.padding(top = 16.dp)) {
+        Text(
+            text = title.uppercase(Locale.getDefault()),
+            style = PartOfSpeechStyle,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(8.dp))
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            words.forEach { word ->
                 Text(
-                    text = "“$example”",
-                    style = MaterialTheme.typography.bodyMedium,
-                    fontStyle = FontStyle.Italic,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp),
-                )
-            }
-            if (sense.synonyms.isNotEmpty()) {
-                Text(
-                    text = stringResource(R.string.meaning_similar, sense.synonyms.joinToString(", ")),
+                    text = word,
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(top = 4.dp),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .clickable { onWord(word) }
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
                 )
             }
         }
+    }
+}
+
+@Composable
+private fun SourceLine(source: MeaningSource, offlineOnly: Boolean) {
+    Row(
+        Modifier.padding(top = 18.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        if (offlineOnly) {
+            Icon(
+                Icons.Rounded.CloudOff,
+                contentDescription = null,
+                modifier = Modifier.size(14.dp),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.width(6.dp))
+        }
+        Text(
+            text = stringResource(
+                when {
+                    offlineOnly -> R.string.source_offline_fallback
+                    source == MeaningSource.SIMPLE_WIKTIONARY -> R.string.source_simple_wiktionary
+                    source == MeaningSource.WIKTIONARY -> R.string.source_wiktionary
+                    else -> R.string.source_offline
+                },
+            ),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+        )
     }
 }
 
@@ -411,11 +522,4 @@ private fun MessageBody(message: String) {
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 24.dp),
     )
-}
-
-private fun PartOfSpeech.labelRes(): Int = when (this) {
-    PartOfSpeech.NOUN -> R.string.pos_noun
-    PartOfSpeech.VERB -> R.string.pos_verb
-    PartOfSpeech.ADJECTIVE -> R.string.pos_adjective
-    PartOfSpeech.ADVERB -> R.string.pos_adverb
 }

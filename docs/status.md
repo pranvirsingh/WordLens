@@ -1,6 +1,24 @@
 # Status
 
-**Current:** v1.0.0 (Point and hold), built on `feat/wl-v1`.
+**Current:** v1.1.0 (Simple meanings), built on `feat/wl-v1`. v1.0.0 shipped
+2026-10-14 (PR #1, release `v1.0.0` with its APK).
+
+## v1.1.0
+
+- Online meanings come from Simple English Wiktionary, then full Wiktionary,
+  plus Datamuse synonyms and opposites. No key is needed.
+- The offline meaning shows first, then gets upgraded. Fetching starts while
+  the reader is still aiming.
+- Offline antonyms were added to the dictionary file (`antonyms` table).
+- New card: pronunciation, example bubbles, tappable Similar/Opposite chips
+  with Back.
+- ⋮ menu with theme (Match phone / Light / Dark), an online on/off switch,
+  and About.
+- Parsers were checked against real live responses (contagious, ominous,
+  reluctant, run, wistful, …).
+- 136 unit tests passing; lint clean. Checked on a real phone (Motorola Edge 50
+  Fusion, Android 16): card in light + dark, chips + Back, theme menu, and a
+  word with two base forms ("saw" → see + saw).
 
 ## v1.0.0
 
@@ -15,4 +33,4 @@
 
 ## Next
 
-- v1.1.0 (In your sentence): see [roadmap-v1.md](roadmap-v1.md).
+- v1.2.0 (My words): see [roadmap-v1.md](roadmap-v1.md).

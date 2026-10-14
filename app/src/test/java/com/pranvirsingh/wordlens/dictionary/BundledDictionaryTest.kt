@@ -60,6 +60,14 @@ class BundledDictionaryTest {
     }
 
     @Test
+    fun `opposites are included, directly and through similar words`() = runTest {
+        val hot = lookUp("hot")!!.entries.first { it.pos == ADJECTIVE }
+        assertTrue("cold" in hot.senses.first().antonyms)
+        val reluctant = lookUp("reluctant")!!.entries.first()
+        assertTrue("willing" in reluctant.senses.first().antonyms)
+    }
+
+    @Test
     fun `nonsense is not found`() = runTest {
         assertNull(lookUp("qwrtzpl"))
     }
@@ -96,6 +104,7 @@ class BundledDictionaryTest {
                                     definition = rows.getString(4),
                                     examples = DictionarySql.splitList(rows.getString(5)),
                                     lemmas = DictionarySql.splitList(rows.getString(6)),
+                                    antonyms = DictionarySql.splitList(rows.getString(7)),
                                 ),
                             )
                         }

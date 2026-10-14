@@ -8,6 +8,7 @@ The input directory is the standard WordNet 3.0 database distribution
 `DictionaryDatabase.kt` queries:
 
     lemma_senses(lemma, pos, rank, tag_count, synset_id)  -- one row per word sense
+    antonyms(lemma, synset_id, antonym)        -- opposites of one sense of a word
     synsets(id, pos, definition, examples, lemmas)
     exceptions(form, pos, base)                -- irregular forms, e.g. went -> go
 
@@ -27,6 +28,8 @@ POS_FILES = {"n": "noun", "v": "verb", "a": "adj", "r": "adv"}
 SS_TYPE_TO_POS = {"n": "n", "v": "v", "a": "a", "s": "a", "r": "r"}
 # index.sense encodes the synset type as a digit after the '%'.
 SENSE_KEY_POS = {"1": "n", "2": "v", "3": "a", "4": "r", "5": "a"}
+# Pointer targets name their part of speech by letter; satellites live in data.adj.
+POINTER_POS_FILE = {"n": "noun", "v": "verb", "a": "adj", "s": "adj", "r": "adv"}
 ADJ_MARKER = re.compile(r"\((a|p|ip)\)$")
 EXAMPLE = re.compile(r'"([^"]*)"')
 # WordNet writes inner quotes TeX-style (`to'); show them as real quote marks.
@@ -50,7 +53,11 @@ def clean_lemma(raw):
 
 
 def read_data_file(path, pos_name):
-    """Yield (synset_key, pos, definition, examples, lemmas) for every synset."""
+    """Yield (synset_key, pos, ss_type, definition, examples, lemmas, words, pointers) for every synset.
+
+    pointers are (symbol, target_key, source_word_number, target_word_number);
+    word numbers are 1-based, 0 meaning "the whole synset".
+    """
     with open(path, encoding="utf-8") as f:
         for line in f:
             if line.startswith("  "):  # license header
@@ -59,13 +66,28 @@ def read_data_file(path, pos_name):
             fields = head.split()
             offset, ss_type = fields[0], fields[2]
             word_count = int(fields[3], 16)
+            # Pointers number words by their position in this original list, so keep it
+            # whole; `lemmas` is the de-duplicated list that's stored and shown.
+            words = [clean_lemma(fields[4 + 2 * i]) for i in range(word_count)]
             lemmas = []
-            for i in range(word_count):
-                lemma = clean_lemma(fields[4 + 2 * i])
+            for lemma in words:
                 if lemma not in lemmas:
                     lemmas.append(lemma)
+            pointer_count_at = 4 + 2 * word_count
+            pointers = []
+            for i in range(int(fields[pointer_count_at])):
+                start = pointer_count_at + 1 + 4 * i
+                symbol, target, target_pos, source_target = fields[start : start + 4]
+                pointers.append(
+                    (
+                        symbol,
+                        (POINTER_POS_FILE[target_pos], target),
+                        int(source_target[:2], 16),
+                        int(source_target[2:], 16),
+                    )
+                )
             definition, examples = parse_gloss(gloss)
-            yield (pos_name, offset), SS_TYPE_TO_POS[ss_type], definition, examples, lemmas
+            yield (pos_name, offset), SS_TYPE_TO_POS[ss_type], ss_type, definition, examples, lemmas, words, pointers
 
 
 def read_index_file(path):
@@ -105,6 +127,43 @@ def read_exceptions(path):
                     yield form, base.replace("_", " ")
 
 
+def collect_antonyms(synset_words, synset_pointers, satellites):
+    """Map synset key -> [(lemma, antonym)].
+
+    Direct antonyms are WordNet's word-to-word "!" pointers ("hot" -> "cold").
+    Adjective satellites ("scorching") have none of their own, so they borrow
+    the opposites of the head adjective they're similar to ("hot" -> "cold").
+    """
+
+    def word(key, number):
+        words = synset_words[key]
+        return words[number - 1].lower() if 0 < number <= len(words) else None
+
+    direct = {}
+    for key, pointers in synset_pointers.items():
+        for symbol, target, source_number, target_number in pointers:
+            if symbol != "!":
+                continue
+            lemma, antonym = word(key, source_number), word(target, target_number)
+            if lemma and antonym and (lemma, antonym) not in direct.setdefault(key, []):
+                direct[key].append((lemma, antonym))
+
+    result = {key: list(pairs) for key, pairs in direct.items() if pairs}
+    for key in satellites:
+        opposites = []
+        for symbol, head, _, _ in synset_pointers[key]:
+            if symbol != "&":
+                continue
+            for _, antonym in direct.get(head, []):
+                if antonym not in opposites:
+                    opposites.append(antonym)
+        have = {lemma for lemma, _ in result.get(key, [])}
+        for lemma in (w.lower() for w in synset_words[key]):
+            if lemma not in have:
+                result.setdefault(key, []).extend((lemma, antonym) for antonym in opposites)
+    return result
+
+
 def build(wordnet_dir, out_path):
     if os.path.exists(out_path):
         os.remove(out_path)
@@ -131,20 +190,36 @@ def build(wordnet_dir, out_path):
             pos TEXT NOT NULL,
             base TEXT NOT NULL
         );
+        CREATE TABLE antonyms(
+            lemma TEXT NOT NULL,
+            synset_id INTEGER NOT NULL,
+            antonym TEXT NOT NULL
+        );
         """
     )
 
     synset_ids = {}
+    synset_words = {}
+    synset_pointers = {}
+    satellites = set()
     for pos, name in POS_FILES.items():
-        for key, real_pos, definition, examples, lemmas in read_data_file(
+        for key, real_pos, ss_type, definition, examples, lemmas, words, pointers in read_data_file(
             os.path.join(wordnet_dir, f"data.{name}"), name
         ):
             synset_id = len(synset_ids) + 1
             synset_ids[key] = synset_id
+            synset_words[key] = words
+            synset_pointers[key] = pointers
+            if ss_type == "s":
+                satellites.add(key)
             db.execute(
                 "INSERT INTO synsets VALUES (?, ?, ?, ?, ?)",
                 (synset_id, real_pos, definition, "\n".join(examples), "\n".join(lemmas)),
             )
+
+    for key, pairs in collect_antonyms(synset_words, synset_pointers, satellites).items():
+        for lemma, antonym in pairs:
+            db.execute("INSERT INTO antonyms VALUES (?, ?, ?)", (lemma, synset_ids[key], antonym))
 
     tag_counts = read_tag_counts(os.path.join(wordnet_dir, "index.sense"))
     for pos, name in POS_FILES.items():
@@ -161,6 +236,7 @@ def build(wordnet_dir, out_path):
         """
         CREATE INDEX idx_lemma_senses ON lemma_senses(lemma, pos);
         CREATE INDEX idx_exceptions ON exceptions(form);
+        CREATE INDEX idx_antonyms ON antonyms(lemma, synset_id);
         PRAGMA user_version = 1;
         """
     )

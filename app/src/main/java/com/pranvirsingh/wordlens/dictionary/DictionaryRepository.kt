@@ -42,6 +42,7 @@ class DictionaryRepository(
                 synonyms = record.lemmas
                     .filterNot { it.equals(candidate.lemma, ignoreCase = true) }
                     .take(MAX_SYNONYMS),
+                antonyms = record.antonyms,
             )
         }
         return RankedEntry(Entry(candidate.lemma, candidate.pos, senses), records.sumOf { it.tagCount })

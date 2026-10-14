@@ -6,6 +6,7 @@
 | Camera | CameraX `LifecycleCameraController` + `PreviewView` | Handles lifecycle, rotation, pinch-zoom and tap-to-focus for us |
 | Reading text | ML Kit Text Recognition (Latin), **bundled** model | Fully on-device and offline, with no first-run model download. `MlKitAnalyzer` returns word boxes already in screen pixels |
 | Dictionary | WordNet 3.0 → compact SQLite file inside the APK | Offline, instant, free to redistribute. Senses are ranked by real-world frequency |
+| Online meanings | OkHttp → Simple English Wiktionary (MediaWiki API), English Wiktionary (REST), Datamuse | Free, no account or key, no daily limit; plain-English wording |
 | Pronunciation | Android `TextToSpeech` | Built into the phone, nothing to ship |
 | Build | Gradle 8.11.1, AGP 8.7.3, Kotlin 2.1.0, JDK 17, compile/target SDK 35, min SDK 26 | Stable, well-supported set |
 | CI / releases | GitHub Actions | `ci.yml` on every PR; `release.yml` builds the signed APK when a release is published |

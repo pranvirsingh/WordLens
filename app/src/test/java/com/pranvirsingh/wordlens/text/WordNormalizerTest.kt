@@ -59,6 +59,16 @@ class WordNormalizerTest {
     }
 
     @Test
+    fun `phrases chosen on the card keep their spaces`() {
+        assertEquals("ice cream", WordNormalizer.normalizePhrase("  Ice   cream "))
+        assertEquals("look after", WordNormalizer.normalizePhrase("look after"))
+        assertEquals("well-known", WordNormalizer.normalizePhrase("well‐known"))
+        assertNull(WordNormalizer.normalizePhrase("12 34"))
+        assertNull(WordNormalizer.normalizePhrase("a"))
+        assertNull(WordNormalizer.normalizePhrase("odd/one"))
+    }
+
+    @Test
     fun `clean keeps original case`() {
         assertEquals("Paris", WordNormalizer.clean("Paris!"))
     }
